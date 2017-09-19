@@ -15,6 +15,14 @@ psk="%s"
 }
 '''
 
+NETWORK_TEXT = '''
+auto wlan0
+allow-hotplug wlan0
+iface wlan0 inet dhcp
+wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
+iface default inet dhcp
+'''
+
 def file_replace(filename, pattern, repl):
     with open(filename) as f:
         contents = f.read()
@@ -96,15 +104,8 @@ if __name__ == '__main__':
     # Setup network
     print 'Setting up network interfaces'
     ifaces_path = '%s/etc/network/interfaces' % mount_path
-    with open(ifaces_path) as f:
-        ifaces = f.read()
-
-    ifaces = ifaces.replace('auto lo', 'auto lo\nauto wlan0')
-    ifaces = ifaces.replace('iface wlan0 inet manual', 'iface wlan0 inet dhcp')
-    ifaces += '\niface default inet dhcp'
-
-    with open(ifaces_path, 'w') as f:
-        f.write(ifaces)
+    with open(ifaces_path, 'a') as f:
+        f.write(NETWORK_TEXT)
 
     # Append SSH key
     print 'Writing SSH key'
@@ -117,10 +118,12 @@ if __name__ == '__main__':
         pub_key = f.read()
 
     ssh_path = '%s/home/pi/.ssh' % mount_path
-    with open('%s/authorized_keys' % ssh_path, 'w') as f:
+    keys_path = '%s/authorized_keys' % ssh_path
+    with open(keys_path, 'w') as f:
         f.write(pub_key)
 
-    os.system('chmod -R 600 %s' % ssh_path)
+    os.system('chmod 600 %s' % keys_path)
+    os.system('chmod 700 %s' % ssh_path)
     os.system('chown -R 1000:1000 %s' % ssh_path)
 
     # Unmount image
